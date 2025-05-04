@@ -38,14 +38,18 @@ def predict():
         probabilities = {str(class_labels[i]): float(prob) for i, prob in enumerate(probs)}
     
     # Basic guidance message
-    if prediction_label == "Minimal":
+   
+    if prediction_label == "Minimal Anxiety":
         guidance = "Minimal anxiety."
-    elif prediction_label == "Mild":
+    elif prediction_label == "Mild Anxiety":
         guidance = "Mild anxiety."
-    elif prediction_label == "Moderate":
+    elif prediction_label == "Moderate Anxiety":
         guidance = "Moderate anxiety."
-    else:
+    elif prediction_label == "Severe Anxiety":
         guidance = "Severe anxiety. Consider professional support."
+    else:
+        guidance = "Unknown prediction."
+
 
     return jsonify({
         "prediction": prediction_label,
