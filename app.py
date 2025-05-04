@@ -1,12 +1,6 @@
 import joblib
 import pandas as pd
 
-
-# Load the pre-trained model and other artifacts
-best_model = joblib.load('best_anxiety_model.pkl')
-label_encoder = joblib.load('label_encoder.pkl')
-top_five_questions = joblib.load('top_five_questions.pkl')
-
 print("\nModel, label encoder, and important questions saved for future predictions.")
 
 # Function to get user input and make predictions
