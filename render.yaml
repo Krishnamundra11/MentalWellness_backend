@@ -6,12 +6,9 @@ services:
     env: python
     region: oregon
     plan: free
-    # Install dependencies, no additional build steps needed
     buildCommand: pip install -r requirements.txt
-    # Use Gunicorn to serve the Flask `app` in app.py
-    startCommand: gunicorn --workers 4 --bind 0.0.0.0:$PORT app:app
+    startCommand: gunicorn app:app
     envVars:
       - key: FLASK_ENV
         value: production
-      - key: PYTHONUNBUFFERED
-        value: "1"
+

@@ -1,89 +1,61 @@
+from flask import Flask, request, jsonify
 import joblib
 import pandas as pd
 
-print("\nModel, label encoder, and important questions saved for future predictions.")
+app = Flask(__name__)
 
-# Function to get user input and make predictions
-def predict_anxiety_level():
-    print("\n" + "=" * 50)
-    print("ANXIETY PREDICTION SYSTEM")
-    print("=" * 50)
-    print("\nPlease answer the following questions on a scale of 0-4:")
-    print("0: Not at all")
-    print("1: Several days")
-    print("2: More than half the days")
-    print("3: Nearly every day")
-    print("4: Every day")
+# Load models once when the server starts
+best_model = joblib.load("best_anxiety_model.pkl")
+label_encoder = joblib.load("label_encoder.pkl")
+top_five_questions = joblib.load("top_five_questions.pkl")
 
-    user_responses = {}
-    for i, question in enumerate(top_five_questions, 1):
-        short_q = question.split('?')[0].strip() + "?"
-        while True:
-            try:
-                response = int(input(f"\nQ{i}: {short_q}\nYour answer (0-4): "))
-                if 0 <= response <= 4:
-                    user_responses[question] = response
-                    break
-                else:
-                    print("Please enter a number between 0 and 4.")
-            except ValueError:
-                print("Please enter a valid number.")
+# Map string answers to numeric scale
+answer_map = {
+    "Very Poor": 1,
+    "Poor": 2,
+    "Okay": 3,
+    "Good": 4,
+    "Excellent": 5
+}
 
-    # Create a DataFrame from user input
-    user_data = pd.DataFrame([user_responses])
+# Recommendation text
+recommendations = {
+    "Minimal": "You're doing well. Maintain a healthy balance and keep practicing self-care.",
+    "Mild": "Try taking breaks and practicing light mindfulness exercises.",
+    "Moderate": "Consider talking to a counselor or using mindfulness apps.",
+    "Severe": "You should consult a mental health professional soon."
+}
 
-    # Make prediction
-    prediction = best_model.predict(user_data)
-    prediction_label = label_encoder.inverse_transform(prediction)[0]
-
-    # Calculate total score
-    total_score = sum(user_responses.values())
-    max_possible = len(top_five_questions) * 4
-
-    # Dictionary of recommendations based on anxiety levels
-    recommendations = {
-        "Minimal": "You're doing well. Maintain a healthy study-life balance and continue self-care practices.",
-        "Mild": "Try incorporating short breaks, light exercise, or breathing exercises into your routine.",
-        "Moderate": "Consider talking to a counselor or using mindfulness apps to manage anxiety.",
-        "Severe": "It is advisable to consult a mental health professional. Prioritize your well-being over academic pressure."
-    }
-
-    # Get recommendation
-    recommendation = recommendations.get(prediction_label, "Stay mindful of your mental health. Seek support if needed.")
-
-    print("\n" + "=" * 50)
-    print(f"Total Score: {total_score}/{max_possible}")
-    print(f"Predicted Anxiety Level: {prediction_label}")
-    print(f"Recommendation: {recommendation}")
-    print("=" * 50)
-
-    print("\nNote: This is not a clinical diagnosis. If you're concerned about your mental health,")
-    print("please consult with a qualified healthcare professional.")
-
-    # Optional: return values if integrating with an API
-    return {
-        "prediction": prediction_label,
-        "recommendation": recommendation,
-        
-        "answers": user_responses
-    }
-
-# Main runner function
-def run_anxiety_prediction_system():
+@app.route("/predict", methods=["POST"])
+def predict():
     try:
-        global best_model, label_encoder, top_five_questions
-        best_model = joblib.load('best_anxiety_model.pkl')
-        label_encoder = joblib.load('label_encoder.pkl')
-        top_five_questions = joblib.load('top_five_questions.pkl')
+        data = request.json
+        answers = data.get("answers", {})  # Expecting a map of q1 to q5 like Firebase
 
-        # Call the prediction function
-        result = predict_anxiety_level()
-        return result  # for API use if needed
+        if len(answers) != 5:
+            return jsonify({"error": "Expected 5 answers"}), 400
 
-    except FileNotFoundError:
-        print("Error: Model files not found. Please run the training script first.")
+        # Map q1, q2,... to actual questions in the same order
+        mapped_answers = {}
+        for idx, q in enumerate(top_five_questions):
+            key = f"q{idx+1}"
+            val = answers.get(key)
+            if val not in answer_map:
+                return jsonify({"error": f"Invalid value '{val}' for {key}"}), 400
+            mapped_answers[q] = answer_map[val]
+
+        df = pd.DataFrame([mapped_answers])
+        prediction = best_model.predict(df)
+        label = label_encoder.inverse_transform(prediction)[0]
+        recommendation = recommendations.get(label, "Take care of your mental well-being.")
+
+        return jsonify({
+            "prediction": label,
+            "recommendation": recommendation
+        })
     except Exception as e:
-        print(f"An error occurred: {e}")
+        return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    run_anxiety_prediction_system()
+@app.route("/", methods=["GET"])
+def home():
+    return "Mental Wellness API is running"
