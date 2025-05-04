@@ -11,11 +11,11 @@ top_five_questions = joblib.load("top_five_questions.pkl")
 
 # Map string answers to numeric scale
 answer_map = {
-    "Very Poor": 1,
-    "Poor": 2,
-    "Okay": 3,
-    "Good": 4,
-    "Excellent": 5
+    "Never": 0,
+    "Almost Never": 1,
+    "Sometimes": 2,
+    "Fairly Often": 3,
+    "Very Often": 4
 }
 
 # Recommendation text
